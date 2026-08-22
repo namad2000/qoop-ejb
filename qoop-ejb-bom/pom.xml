@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.qoop</groupId>
-    <artifactId>qoop-bom</artifactId>
+    <artifactId>qoop-ejb-bom</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
@@ -13,29 +13,176 @@
         <!-- Version properties for all dependencies -->
         <qoop.version>0.0.1-SNAPSHOT</qoop.version>
 
-        <!-- External dependencies -->
-        <java.version>8</java.version>
-        <spring-cloud.version>2025.1.1</spring-cloud.version>
+        <!-- Encoding -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- Java Version -->
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+
+        <!-- Library Versions -->
+        <jackson.version>2.13.5</jackson.version>
+        <spring-expression.version>5.3.28</spring-expression.version>
+        <caffeine.version>2.9.3</caffeine.version>
+        <jedis.version>3.9.0</jedis.version>
+        <slf4j.version>1.7.36</slf4j.version>
+        <logback.version>1.2.12</logback.version>
+        <commons-lang3.version>3.12.0</commons-lang3.version>
+        <embedded-redis.version>0.6</embedded-redis.version>
+        <assertj-core.version>3.22.0</assertj-core.version>
+        <qoop-ejb-cacheable.version>0.0.1-SNAPSHOT</qoop-ejb-cacheable.version>
     </properties>
+
 
     <dependencyManagement>
         <dependencies>
-            <!-- Spring Cloud -->
+            <!-- Core: Jackson (Serialization) -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
 
-            <!-- SpringDoc OpenAPI -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
 
-            <!-- Spring Boot AOP -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-jsr310</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+
+            <!-- Core: Spring Expression (SpEL) -->
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-expression</artifactId>
+                <version>${spring-expression.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-core</artifactId>
+                <version>${spring-expression.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-beans</artifactId>
+                <version>${spring-expression.version}</version>
+            </dependency>
+
+            <!-- Cache: Caffeine (L1 Local Cache) -->
+            <dependency>
+                <groupId>com.github.ben-manes.caffeine</groupId>
+                <artifactId>caffeine</artifactId>
+                <version>${caffeine.version}</version>
+            </dependency>
+
+            <!-- Cache: Jedis (L2 Distributed Cache) -->
+            <dependency>
+                <groupId>redis.clients</groupId>
+                <artifactId>jedis</artifactId>
+                <version>${jedis.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-pool2</artifactId>
+                <version>2.11.1</version>
+            </dependency>
+
+            <!-- Java EE 8: CDI / EJB / Annotation APIs -->
+            <dependency>
+                <groupId>javax.enterprise</groupId>
+                <artifactId>cdi-api</artifactId>
+                <version>2.0</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>javax.ejb</groupId>
+                <artifactId>javax.ejb-api</artifactId>
+                <version>3.2.2</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>javax.annotation</groupId>
+                <artifactId>javax.annotation-api</artifactId>
+                <version>1.3.2</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>javax.interceptor</groupId>
+                <artifactId>javax.interceptor-api</artifactId>
+                <version>1.2.2</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <!-- Utilities -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>${commons-lang3.version}</version>
+            </dependency>
+
+            <!-- Doc OpenAPI -->
+            <!-- TODO: Add springdoc-openapi for API documentation -->
 
             <!-- MapStruct -->
+            <!-- TODO: Add mapstruct for DTO mapping -->
 
             <!-- Lombok -->
+            <!-- TODO: Add lombok for boilerplate reduction -->
 
             <!-- JWT -->
+            <!-- TODO: Add jjwt or nimbus-jose-jwt for JWT handling -->
 
             <!-- Logging -->
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>${logback.version}</version>
+            </dependency>
+
+            <!-- Testing -->
+            <dependency>
+                <groupId>com.github.kstyrc</groupId>
+                <artifactId>embedded-redis</artifactId>
+                <version>${embedded-redis.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.assertj</groupId>
+                <artifactId>assertj-core</artifactId>
+                <version>${assertj-core.version}</version>
+                <scope>test</scope>
+            </dependency>
 
             <!-- Internal Dependencies -->
-
+            <dependency>
+                <groupId>io.qoop</groupId>
+                <artifactId>qoop-ejb-cacheable-api</artifactId>
+                <version>${qoop-ejb-cacheable.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 </project>

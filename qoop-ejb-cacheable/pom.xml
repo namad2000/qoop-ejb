@@ -5,20 +5,17 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>io.qoop</groupId>
-        <artifactId>qoop-ejb-parent</artifactId>
+        <artifactId>qoop-ejb</artifactId>
         <version>0.0.1-SNAPSHOT</version>
-        <relativePath>qoop-ejb-parent/pom.xml</relativePath>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>qoop-ejb</artifactId>
+    <artifactId>qoop-ejb-cacheable</artifactId>
 
     <packaging>pom</packaging>
 
-    <description>Quantum Object-Oriented Programming</description>
-
     <modules>
-        <module>qoop-ejb-bom</module>
-        <module>qoop-ejb-parent</module>
-        <module>qoop-ejb-cacheable</module>
+        <module>qoop-ejb-cacheable-api</module>
+        <module>qoop-ejb-cacheable-core</module>
     </modules>
 </project>
