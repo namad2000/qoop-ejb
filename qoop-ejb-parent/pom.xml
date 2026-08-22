@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>io.qoop</groupId>
+    <artifactId>qoop-ejb-parent</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>qoop-ejb-parent</name>
+    <description>Parent POM for EJB Quantum Object-Oriented Programming</description>
+
+    <properties>
+        <qoop-ejb.version>0.0.1-SNAPSHOT</qoop-ejb.version>
+        <qoop-ejb-bom.version>${qoop-ejb.version}</qoop-ejb-bom.version>
+
+        <!-- External dependencies -->
+        <java.version>8</java.version>
+        <junit-jupiter.version>5.8.2</junit-jupiter.version>
+        <mockito.version>4.8.0</mockito.version>
+    </properties>
+
+
+    <dependencies>
+
+        <!-- ========== TEST DEPENDENCIES ========== -->
+        <!-- JUnit 5 Engine -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit-jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Mockito Core & JUnit 5 Extension -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>${mockito-core.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>${mockito-core.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.qoop</groupId>
+                <artifactId>qoop-ejb-bom</artifactId>
+                <version>${qoop-ejb-bom.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>

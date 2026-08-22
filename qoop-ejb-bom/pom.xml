@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>io.qoop</groupId>
+    <artifactId>qoop-bom</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <properties>
+        <!-- Version properties for all dependencies -->
+        <qoop.version>0.0.1-SNAPSHOT</qoop.version>
+
+        <!-- External dependencies -->
+        <java.version>8</java.version>
+        <spring-cloud.version>2025.1.1</spring-cloud.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Spring Cloud -->
+
+            <!-- SpringDoc OpenAPI -->
+
+            <!-- Spring Boot AOP -->
+
+            <!-- MapStruct -->
+
+            <!-- Lombok -->
+
+            <!-- JWT -->
+
+            <!-- Logging -->
+
+            <!-- Internal Dependencies -->
+
+        </dependencies>
+    </dependencyManagement>
+</project>
