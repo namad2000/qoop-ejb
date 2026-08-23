@@ -7,6 +7,7 @@ import io.qoop.util.EvaluationContextData;
 import io.qoop.util.EvaluationService;
 import ir.tamin.framework.core.util.Bundle;
 import ir.tamin.framework.logging.api.logger.AppLogger;
+import ir.tamin.framework.logging.api.qualifier.ApplicationLogger;
 
 import javax.annotation.Priority;
 import javax.inject.Inject;
@@ -30,6 +31,7 @@ public class CacheInterceptor {
     private LocalCacheManager localCacheManager;
 
     @Inject
+    @ApplicationLogger
     private AppLogger appLogger;
 
     @Inject
