@@ -3,8 +3,8 @@ package io.qoop.cacheable;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.google.gson.Gson;
 import io.qoop.global.model.LogContent;
-import io.qoop.util.EvaluationService;
 import io.qoop.util.EvaluationContextData;
+import io.qoop.util.EvaluationService;
 import ir.tamin.framework.core.util.Bundle;
 import ir.tamin.framework.logging.api.logger.AppLogger;
 
@@ -52,6 +52,7 @@ public class CacheInterceptor {
     @AroundInvoke
     public Object handleCaching(InvocationContext context) throws Exception {
         Method method = context.getMethod();
+
         CacheEvict cacheEvict = method.getAnnotation(CacheEvict.class);
         if (cacheEvict != null) {
             return handleEviction(context, cacheEvict);
@@ -62,7 +63,16 @@ public class CacheInterceptor {
             return context.proceed();
         }
 
+        return processCacheable(context, cacheable);
+    }
+
+    // ==========================================
+    // Caching Processing Methods
+    // ==========================================
+
+    private Object processCacheable(InvocationContext context, Cacheable cacheable) throws Exception {
         String system = resolveSystem(cacheable.system());
+
         EvaluationContextData evalData = evaluationService.createEvaluationContext(context);
 
         if (!evaluationService.evaluateCondition(cacheable.condition(), evalData.context)) {
@@ -70,124 +80,140 @@ public class CacheInterceptor {
         }
 
         String cacheKey = evaluationService.evaluateKey(cacheable.key(), evalData);
-        String[] cacheNames = cacheable.cacheNames();
-        Type returnType = method.getGenericReturnType();
+        Method method = context.getMethod();
 
-        // Check L1 & Redis across all defined cacheNames
-        for (String cacheName : cacheNames) {
-            String fullKey = system + ":" + cacheName + ":" + cacheKey;
-
-            Cache<String, Object> l1Cache = cacheable.useLocalCache() ?
-                    localCacheManager.getOrCreateCache(cacheName, cacheable.localMaximumSize(), cacheable.localExpireAfterWriteSeconds()) : null;
-
-            if (l1Cache != null) {
-                Object l1Result = l1Cache.getIfPresent(fullKey);
-                if (l1Result != null) {
-                    return l1Result;
-                }
-            }
-
-            try {
-                String cachedJson = redisService.get(fullKey);
-                if (cachedJson != null) {
-                    Object deserialized = gson.fromJson(cachedJson, returnType);
-                    if (deserialized != null) {
-                        if (l1Cache != null) {
-                            l1Cache.put(fullKey, deserialized);
-                        }
-                        return deserialized;
-                    }
-                }
-            } catch (Exception e) {
-                appLogger.errorLog(new LogContent("Cache read error: ", e.getMessage()), "handleCaching");
-            }
+        // 1. Try to read from cache (L1 or L2)
+        Object cachedResult = findInCache(cacheable, system, cacheKey, method.getGenericReturnType());
+        if (cachedResult != null) {
+            return cachedResult;
         }
 
+        // 2. Execute original method
         Object result = context.proceed();
 
+        // 3. Check unless condition and save to cache if valid
         if (evaluationService.evaluateUnless(cacheable.unless(), evalData.context, result)) {
             return result;
         }
 
         if (result != null) {
-            try {
-                String jsonResult = gson.toJson(result);
-                // Save to all defined cacheNames
-                for (String cacheName : cacheNames) {
-                    String fullKey = system + ":" + cacheName + ":" + cacheKey;
-                    redisService.set(fullKey, jsonResult, cacheable.ttlSeconds());
-
-                    if (cacheable.useLocalCache()) {
-                        Cache<String, Object> l1Cache = localCacheManager.getOrCreateCache(cacheName, cacheable.localMaximumSize(), cacheable.localExpireAfterWriteSeconds());
-                        if (l1Cache != null) {
-                            l1Cache.put(fullKey, result);
-                        }
-                    }
-                }
-
-                if (cacheable.enableItemWarming()) {
-                    itemWarmingService.processItemWarming(cacheable, evalData, result, system);
-                }
-            } catch (Exception e) {
-                appLogger.errorLog(new LogContent("Cache write error: ", e.getMessage()), "handleCaching");
-            }
+            writeToCache(cacheable, evalData, system, cacheKey, result);
         }
 
         return result;
     }
 
+    private Object findInCache(Cacheable cacheable, String system, String cacheKey, Type returnType) {
+        for (String cacheName : cacheable.cacheNames()) {
+            String fullKey = buildFullKey(system, cacheName, cacheKey);
+
+            // Check L1 Cache
+            Object l1Result = readFromL1Cache(cacheable, cacheName, fullKey);
+            if (l1Result != null) {
+                return l1Result;
+            }
+
+            // Check Redis Cache
+            Object redisResult = readFromRedisCache(cacheable, cacheName, fullKey, returnType);
+            if (redisResult != null) {
+                return redisResult;
+            }
+        }
+        return null;
+    }
+
+    private Object readFromL1Cache(Cacheable cacheable, String cacheName, String fullKey) {
+        if (!cacheable.useLocalCache()) {
+            return null;
+        }
+        Cache<String, Object> l1Cache = getL1Cache(cacheable, cacheName);
+        return (l1Cache != null) ? l1Cache.getIfPresent(fullKey) : null;
+    }
+
+    private Object readFromRedisCache(Cacheable cacheable, String cacheName, String fullKey, Type returnType) {
+        try {
+            String cachedJson = redisService.get(fullKey);
+            if (cachedJson != null) {
+                Object deserialized = gson.fromJson(cachedJson, returnType);
+                if (deserialized != null) {
+                    populateL1CacheIfEnabled(cacheable, cacheName, fullKey, deserialized);
+                    return deserialized;
+                }
+            }
+        } catch (Exception e) {
+            appLogger.errorLog(new LogContent("Cache read error: ", e.getMessage()), "handleCaching");
+        }
+        return null;
+    }
+
+    private void writeToCache(Cacheable cacheable, EvaluationContextData evalData, String system, String cacheKey, Object result) {
+        try {
+            String jsonResult = gson.toJson(result);
+
+            for (String cacheName : cacheable.cacheNames()) {
+                String fullKey = buildFullKey(system, cacheName, cacheKey);
+                redisService.set(fullKey, jsonResult, cacheable.ttlSeconds());
+                populateL1CacheIfEnabled(cacheable, cacheName, fullKey, result);
+            }
+
+            if (cacheable.enableItemWarming()) {
+                itemWarmingService.processItemWarming(cacheable, evalData, result, system);
+            }
+        } catch (Exception e) {
+            appLogger.errorLog(new LogContent("Cache write error: ", e.getMessage()), "handleCaching");
+        }
+    }
+
+    private void populateL1CacheIfEnabled(Cacheable cacheable, String cacheName, String fullKey, Object value) {
+        if (cacheable.useLocalCache()) {
+            Cache<String, Object> l1Cache = getL1Cache(cacheable, cacheName);
+            if (l1Cache != null) {
+                l1Cache.put(fullKey, value);
+            }
+        }
+    }
+
+    private Cache<String, Object> getL1Cache(Cacheable cacheable, String cacheName) {
+        return localCacheManager.getOrCreateCache(
+                cacheName,
+                cacheable.localMaximumSize(),
+                cacheable.localExpireAfterWriteSeconds()
+        );
+    }
+
+    // ==========================================
+    // Eviction Processing Methods
+    // ==========================================
+
     private Object handleEviction(InvocationContext context, CacheEvict cacheEvict) throws Exception {
-        Method method = context.getMethod();
-        String system = resolveSystem(cacheEvict.system());
         EvaluationContextData evalData = evaluationService.createEvaluationContext(context);
 
         if (!evaluationService.evaluateCondition(cacheEvict.condition(), evalData.context)) {
             return context.proceed();
         }
 
+        String system = resolveSystem(cacheEvict.system());
+
         if (cacheEvict.beforeInvocation()) {
-            executeEviction(cacheEvict, evalData, system, method);
+            executeEviction(cacheEvict, evalData, system);
         }
 
         Object result = context.proceed();
 
         if (!cacheEvict.beforeInvocation()) {
-            executeEviction(cacheEvict, evalData, system, method);
+            executeEviction(cacheEvict, evalData, system);
         }
 
         return result;
     }
 
-    private void executeEviction(CacheEvict cacheEvict, EvaluationContextData evalData, String system, Method method) {
+    private void executeEviction(CacheEvict cacheEvict, EvaluationContextData evalData, String system) {
         try {
-            String[] cacheNames = cacheEvict.cacheNames();
-
-            for (String cacheName : cacheNames) {
+            for (String cacheName : cacheEvict.cacheNames()) {
                 if (cacheEvict.allEntries()) {
-                    String pattern = system + ":" + cacheName + ":*";
-                    redisService.delByPattern(pattern);
-                    localCacheManager.invalidateAll(cacheName);
-                    pubSubService.publishEviction(cacheName + ":*");
-                    continue;
-                }
-
-                List<String> keysToEvict = new ArrayList<>();
-                if (cacheEvict.keys().length > 0) {
-                    for (String expr : cacheEvict.keys()) {
-                        keysToEvict.add(evaluationService.evaluateKey(expr, evalData));
-                    }
+                    evictAllEntries(cacheName, system);
                 } else {
-                    keysToEvict.add(evaluationService.evaluateKey(cacheEvict.key(), evalData));
-                }
-
-                for (String key : keysToEvict) {
-                    String fullKey = system + ":" + cacheName + ":" + key;
-                    redisService.del(fullKey);
-                    Cache<String, Object> l1Cache = localCacheManager.getOrCreateCache(cacheName, 1000, 3600);
-                    if (l1Cache != null) {
-                        l1Cache.invalidate(fullKey);
-                    }
-                    pubSubService.publishEviction(cacheName + ":" + fullKey);
+                    evictSpecificEntries(cacheEvict, evalData, cacheName, system);
                 }
             }
         } catch (Exception e) {
@@ -195,10 +221,54 @@ public class CacheInterceptor {
         }
     }
 
+    private void evictAllEntries(String cacheName, String system) {
+        String pattern = system + ":" + cacheName + ":*";
+        redisService.delByPattern(pattern);
+        localCacheManager.invalidateAll(cacheName);
+        pubSubService.publishEviction(cacheName + ":*");
+    }
+
+    private void evictSpecificEntries(CacheEvict cacheEvict, EvaluationContextData evalData, String cacheName, String system) {
+        List<String> keysToEvict = resolveKeysToEvict(cacheEvict, evalData);
+
+        for (String key : keysToEvict) {
+            String fullKey = buildFullKey(system, cacheName, key);
+            redisService.del(fullKey);
+
+            Cache<String, Object> l1Cache = localCacheManager.getOrCreateCache(cacheName, 1000, 3600);
+            if (l1Cache != null) {
+                l1Cache.invalidate(fullKey);
+            }
+
+            pubSubService.publishEviction(cacheName + ":" + fullKey);
+        }
+    }
+
+    private List<String> resolveKeysToEvict(CacheEvict cacheEvict, EvaluationContextData evalData) {
+        List<String> keysToEvict = new ArrayList<>();
+        if (cacheEvict.keys().length > 0) {
+            for (String expr : cacheEvict.keys()) {
+                keysToEvict.add(evaluationService.evaluateKey(expr, evalData));
+            }
+        } else {
+            keysToEvict.add(evaluationService.evaluateKey(cacheEvict.key(), evalData));
+        }
+        return keysToEvict;
+    }
+
+    // ==========================================
+    // Helper Methods
+    // ==========================================
+
+    private String buildFullKey(String system, String cacheName, String key) {
+        return system + ":" + cacheName + ":" + key;
+    }
+
     private String resolveSystem(String annotationSystem) {
         if (!evaluationService.isEmpty(annotationSystem)) {
             return annotationSystem;
         }
+
         try {
             String bundleSys = serviceBundle.getProperty("cache.system.name");
             if (!evaluationService.isEmpty(bundleSys)) {
@@ -211,6 +281,7 @@ public class CacheInterceptor {
         if (!evaluationService.isEmpty(propSys)) {
             return propSys;
         }
+
         throw new IllegalStateException("System name could not be resolved for caching.");
     }
 }
