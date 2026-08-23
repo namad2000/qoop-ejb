@@ -23,31 +23,29 @@ import java.util.List;
 @Priority(Interceptor.Priority.APPLICATION)
 public class CacheInterceptor {
 
-    private final CacheService redisService;
-    private final LocalCacheManager localCacheManager;
-    private final AppLogger appLogger;
-    private final Bundle serviceBundle;
-    private final EvaluationService evaluationService;
-    private final ItemWarmingService itemWarmingService;
-    private final CachePubSubService pubSubService;
-    private final Gson gson = new Gson();
+    @Inject
+    private CacheService redisService;
 
     @Inject
-    public CacheInterceptor(CacheService redisService,
-                            LocalCacheManager localCacheManager,
-                            AppLogger appLogger,
-                            Bundle serviceBundle,
-                            EvaluationService evaluationService,
-                            ItemWarmingService itemWarmingService,
-                            CachePubSubService pubSubService) {
-        this.redisService = redisService;
-        this.localCacheManager = localCacheManager;
-        this.appLogger = appLogger;
-        this.serviceBundle = serviceBundle;
-        this.evaluationService = evaluationService;
-        this.itemWarmingService = itemWarmingService;
-        this.pubSubService = pubSubService;
-    }
+    private LocalCacheManager localCacheManager;
+
+    @Inject
+    private AppLogger appLogger;
+
+    @Inject
+    private Bundle serviceBundle;
+
+    @Inject
+    private EvaluationService evaluationService;
+
+    @Inject
+    private ItemWarmingService itemWarmingService;
+
+    @Inject
+    private CachePubSubService pubSubService;
+
+    private final Gson gson = new Gson();
+
 
     @AroundInvoke
     public Object handleCaching(InvocationContext context) throws Exception {
