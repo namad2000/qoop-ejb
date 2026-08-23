@@ -6,12 +6,12 @@
 
     <groupId>io.qoop</groupId>
     <artifactId>qoop-ejb-bom</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>${qoop-ejb-global-core.version}</version>
     <packaging>pom</packaging>
 
     <properties>
         <!-- Version properties for all dependencies -->
-        <qoop.version>0.0.1-SNAPSHOT</qoop.version>
+        <qoop.version>${qoop-ejb-global-core.version}</qoop.version>
 
         <!-- Encoding -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -31,7 +31,13 @@
         <commons-lang3.version>3.12.0</commons-lang3.version>
         <embedded-redis.version>0.6</embedded-redis.version>
         <assertj-core.version>3.22.0</assertj-core.version>
-        <qoop-ejb-cacheable.version>0.0.1-SNAPSHOT</qoop-ejb-cacheable.version>
+        <qoop-ejb-cacheable.version>${qoop-ejb-global-core.version}</qoop-ejb-cacheable.version>
+        <commons-pool2.version>2.11.1</commons-pool2.version>
+        <json.version>20231013</json.version>
+        <gson.version>2.8.9</gson.version>
+        <logging-api.version>1.2-SNAPSHOT</logging-api.version>
+        <qoop-ejb-global-core.version>0.0.1-SNAPSHOT</qoop-ejb-global-core.version>
+        <qoop-ejb-util.version>0.0.1-SNAPSHOT</qoop-ejb-util.version>
     </properties>
 
 
@@ -60,6 +66,18 @@
                 <groupId>com.fasterxml.jackson.datatype</groupId>
                 <artifactId>jackson-datatype-jsr310</artifactId>
                 <version>${jackson.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.google.code.gson</groupId>
+                <artifactId>gson</artifactId>
+                <version>${gson.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.json</groupId>
+                <artifactId>json</artifactId>
+                <version>${json.version}</version>
             </dependency>
 
             <!-- Core: Spring Expression (SpEL) -->
@@ -98,7 +116,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-pool2</artifactId>
-                <version>2.11.1</version>
+                <version>${commons-pool2.version}</version>
             </dependency>
 
             <!-- Java EE 8: CDI / EJB / Annotation APIs -->
@@ -178,6 +196,24 @@
             </dependency>
 
             <!-- Internal Dependencies -->
+            <dependency>
+                <groupId>ir.tamin.framework.logging</groupId>
+                <artifactId>logging-api</artifactId>
+                <version>${logging-api.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.qoop</groupId>
+                <artifactId>qoop-ejb-global-core</artifactId>
+                <version>${qoop-ejb-global-core.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.qoop</groupId>
+                <artifactId>qoop-ejb-util-core</artifactId>
+                <version>${qoop-ejb-util.version}</version>
+            </dependency>
+
             <dependency>
                 <groupId>io.qoop</groupId>
                 <artifactId>qoop-ejb-cacheable-api</artifactId>

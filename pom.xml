@@ -20,5 +20,7 @@
         <module>qoop-ejb-bom</module>
         <module>qoop-ejb-parent</module>
         <module>qoop-ejb-cacheable</module>
+        <module>qoop-ejb-global</module>
+        <module>qoop-ejb-util</module>
     </modules>
 </project>

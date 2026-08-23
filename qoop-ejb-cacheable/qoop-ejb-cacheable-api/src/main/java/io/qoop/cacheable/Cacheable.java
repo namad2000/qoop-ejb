@@ -1,58 +1,57 @@
 package io.qoop.cacheable;
 
 import javax.enterprise.util.Nonbinding;
-import javax.interceptor.InterceptorBinding;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@InterceptorBinding
+@javax.interceptor.InterceptorBinding
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Cacheable {
+    @Nonbinding
+    String system() default "";        // System/subsystem identifier to prevent key collisions across modules
 
     @Nonbinding
-    String system() default "";
+    String[] cacheNames() default {};       // Target cache names or categories (e.g., "users", "orders")
 
     @Nonbinding
-    String[] cacheNames() default {};
+    String key() default "";           // SpEL expression to dynamically generate a single cache key
 
     @Nonbinding
-    String key() default "";
+    String condition() default "";     // SpEL expression evaluated before execution; caching runs only if true
 
     @Nonbinding
-    String condition() default "";
+    String unless() default "";        // SpEL expression evaluated after execution; prevents caching if true (uses #result)
 
     @Nonbinding
-    String unless() default "";
+    long ttlSeconds() default 86400;    // Time-To-Live duration for cached entries in seconds (used for both main and item entries)
+
+    // --- Startup Caching Attribute ---
+    @Nonbinding
+    boolean startup() default false; // Flag to trigger caching on application startup
+
+    // --- Item-level Caching (Warmup) Attributes ---
+    @Nonbinding
+    boolean enableItemWarming() default false;     // Flag to enable individual item warming for collection elements
 
     @Nonbinding
-    long ttlSeconds() default 86400;
-
-    // --- Granular & Multi-Level Cache Attributes ---
-    @Nonbinding
-    boolean enableGranular() default false;
+    String[] itemCacheNames() default {};   // Target cache names for individual item entries (matches single-fetch methods)
 
     @Nonbinding
-    String[] granularCacheNames() default {};
+    String itemKey() default "";            // SpEL expression to generate a unique key for each item (e.g., #item.id)
 
     @Nonbinding
-    String granularKey() default "";
+    String itemSource() default "";          // SpEL expression to extract items from parameters (useful for void or custom bulk methods)
+
+    // --- L1 Local Cache (Caffeine) Attributes ---
+    @Nonbinding
+    boolean useLocalCache() default true;       // Flag to enable L1 local cache (Caffeine)
 
     @Nonbinding
-    String granularItems() default "";
+    long localMaximumSize() default 1000;      // Maximum size for L1 local cache
 
     @Nonbinding
-    long granularTtlSeconds() default 86400;
-
-    // Caffeine L1 Configuration
-    @Nonbinding
-    boolean useLocalCache() default true;
-
-    @Nonbinding
-    long localMaximumSize() default 1000;
-
-    @Nonbinding
-    long localExpireAfterWriteSeconds() default 3600;
+    long localExpireAfterWriteSeconds() default 3600; // Expire after write duration for L1 local cache in seconds
 }

@@ -16,21 +16,18 @@
         <dependency>
             <groupId>javax.interceptor</groupId>
             <artifactId>javax.interceptor-api</artifactId>
-            <scope>provided</scope>
         </dependency>
 
         <!-- Nonbinding + Inject + ApplicationScoped -->
         <dependency>
             <groupId>javax.enterprise</groupId>
             <artifactId>cdi-api</artifactId>
-            <scope>provided</scope>
         </dependency>
 
         <!-- PostConstruct + PreDestroy + Priority -->
         <dependency>
             <groupId>javax.annotation</groupId>
             <artifactId>javax.annotation-api</artifactId>
-            <scope>provided</scope>
         </dependency>
     </dependencies>
 </project>

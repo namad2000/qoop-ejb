@@ -12,6 +12,13 @@
     <artifactId>qoop-ejb-cacheable-core</artifactId>
 
     <dependencies>
+        <!-- Nonbinding + Inject + ApplicationScoped -->
+        <dependency>
+            <groupId>javax.enterprise</groupId>
+            <artifactId>cdi-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- InterceptorBinding + Interceptor + AroundInvoke -->
         <dependency>
             <groupId>javax.interceptor</groupId>
@@ -19,10 +26,51 @@
             <scope>provided</scope>
         </dependency>
 
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+        </dependency>
+
+        <!-- PostConstruct + PreDestroy + Priority -->
+        <dependency>
+            <groupId>javax.annotation</groupId>
+            <artifactId>javax.annotation-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>javax.ejb</groupId>
+            <artifactId>javax.ejb-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+        </dependency>
+
         <!-- Internal Dependencies -->
+        <dependency>
+            <groupId>ir.tamin.framework.logging</groupId>
+            <artifactId>logging-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.qoop</groupId>
+            <artifactId>qoop-ejb-global-core</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>io.qoop</groupId>
             <artifactId>qoop-ejb-cacheable-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.qoop</groupId>
+            <artifactId>qoop-ejb-util-core</artifactId>
         </dependency>
     </dependencies>
 </project>
