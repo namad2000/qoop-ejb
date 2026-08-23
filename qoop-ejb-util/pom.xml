@@ -5,6 +5,7 @@
         <groupId>io.qoop</groupId>
         <artifactId>qoop-ejb</artifactId>
         <version>0.0.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>qoop-ejb-util</artifactId>
