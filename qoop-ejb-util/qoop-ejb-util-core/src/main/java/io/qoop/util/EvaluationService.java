@@ -1,5 +1,6 @@
 package io.qoop.util;
 
+import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
@@ -9,18 +10,19 @@ import javax.interceptor.InvocationContext;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @ApplicationScoped
 public class EvaluationService {
 
     private final ExpressionParser parser = new SpelExpressionParser();
+    private final Map<String, Expression> expressionCache = new ConcurrentHashMap<>();
 
     public EvaluationContextData createEvaluationContext(InvocationContext context) {
-        StandardEvaluationContext evalContext = new StandardEvaluationContext();
+        StandardEvaluationContext evalContext = new StandardEvaluationContext(context.getTarget());
         Object[] args = context.getParameters();
         Method method = context.getMethod();
-
-        evalContext.setRootObject(context.getTarget());
 
         EvaluationContextData data = new EvaluationContextData();
         data.args = args;
@@ -29,12 +31,17 @@ public class EvaluationService {
 
         if (args != null && args.length > 0) {
             Parameter[] parameters = method.getParameters();
+
             for (int i = 0; i < args.length; i++) {
                 Object argValue = args[i];
-                evalContext.setVariable("p" + i, argValue);
-                evalContext.setVariable("a" + i, argValue);
-                data.variables.put("p" + i, argValue);
-                data.variables.put("a" + i, argValue);
+
+                String pKey = "p" + i;
+                String aKey = "a" + i;
+
+                evalContext.setVariable(pKey, argValue);
+                evalContext.setVariable(aKey, argValue);
+                data.variables.put(pKey, argValue);
+                data.variables.put(aKey, argValue);
 
                 if (parameters != null && i < parameters.length) {
                     String paramName = parameters[i].getName();
@@ -42,6 +49,7 @@ public class EvaluationService {
                     data.variables.put(paramName, argValue);
                 }
             }
+
             evalContext.setVariable("args", args);
             data.variables.put("args", args);
         }
@@ -57,21 +65,44 @@ public class EvaluationService {
             }
             return evalData.args[0] != null ? evalData.args[0].toString() : "NULL";
         }
-        Object evaluated = parser.parseExpression(keyExpr).getValue(evalData.context);
-        return evaluated != null ? evaluated.toString() : "NULL";
+
+        try {
+            Expression expression = parseAndCacheExpression(keyExpr);
+            Object evaluated = expression.getValue(evalData.context);
+            return evaluated != null ? evaluated.toString() : "NULL";
+        } catch (Exception e) {
+            return "NULL";
+        }
     }
 
     public boolean evaluateCondition(String condition, StandardEvaluationContext context) {
         if (isEmpty(condition)) return true;
-        Boolean result = parser.parseExpression(condition).getValue(context, Boolean.class);
-        return Boolean.TRUE.equals(result);
+        try {
+            Expression expression = parseAndCacheExpression(condition);
+            Boolean result = expression.getValue(context, Boolean.class);
+            return Boolean.TRUE.equals(result);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public boolean evaluateUnless(String unless, StandardEvaluationContext context, Object result) {
         if (isEmpty(unless)) return false;
-        context.setVariable("result", result);
-        Boolean res = parser.parseExpression(unless).getValue(context, Boolean.class);
-        return Boolean.TRUE.equals(res);
+        try {
+            context.setVariable("result", result);
+            Expression expression = parseAndCacheExpression(unless);
+            Boolean res = expression.getValue(context, Boolean.class);
+            return Boolean.TRUE.equals(res);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public Expression parseAndCacheExpression(String expressionText) {
+        if (isEmpty(expressionText)) {
+            return null;
+        }
+        return expressionCache.computeIfAbsent(expressionText, parser::parseExpression);
     }
 
     public ExpressionParser getParser() {

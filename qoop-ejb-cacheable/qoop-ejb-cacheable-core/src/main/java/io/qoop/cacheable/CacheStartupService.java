@@ -14,6 +14,7 @@ import javax.enterprise.inject.spi.Bean;
 import javax.enterprise.inject.spi.BeanManager;
 import javax.inject.Inject;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Set;
 
 @Startup
@@ -34,35 +35,59 @@ public class CacheStartupService {
             Set<Bean<?>> beans = beanManager.getBeans(Object.class);
             for (Bean<?> bean : beans) {
                 Class<?> beanClass = bean.getBeanClass();
-                if (beanClass != null) {
-                    for (Method method : beanClass.getDeclaredMethods()) {
-                        Cacheable cacheable = method.getAnnotation(Cacheable.class);
-                        if (cacheable != null && cacheable.startup()) {
-                            invokeStartupMethod(bean, method);
-                        }
+                if (beanClass == null) {
+                    continue;
+                }
+
+                for (Method method : beanClass.getDeclaredMethods()) {
+                    Cacheable cacheable = method.getAnnotation(Cacheable.class);
+                    if (cacheable != null && cacheable.startup()) {
+                        invokeStartupMethod(bean, method);
                     }
                 }
             }
         } catch (Exception e) {
-            appLogger.errorLog(new LogContent("Error during cache startup warmup", e.getMessage()), "warmupCacheOnStartup");
+            appLogger.errorLog(
+                    new LogContent("Error during cache startup warmup", e.getMessage()),
+                    "warmupCacheOnStartup"
+            );
         }
     }
 
     private void invokeStartupMethod(Bean<?> bean, Method method) {
         if (method.getParameterCount() > 0) {
-            appLogger.errorLog(new LogContent("Startup warmup skipped. No-arg method required for: " + method.getName(), ""), "invokeStartupMethod");
+            appLogger.errorLog(
+                    new LogContent("Startup warmup skipped. No-arg method required for: " + method.getName(), ""),
+                    "invokeStartupMethod"
+            );
             return;
         }
 
-        CreationalContext<?> ctx = beanManager.createCreationalContext(bean);
+        int modifiers = method.getModifiers();
+        if (Modifier.isPrivate(modifiers) || Modifier.isStatic(modifiers)) {
+            appLogger.errorLog(
+                    new LogContent("Startup warmup skipped. Public/protected non-static method required for: " + method.getName(), ""),
+                    "invokeStartupMethod"
+            );
+            return;
+        }
+
+        CreationalContext<?> ctx = null;
         try {
-            Object instance = beanManager.getReference(bean, bean.getBeanClass(), ctx);
-            Method proxyMethod = instance.getClass().getMethod(method.getName(), method.getParameterTypes());
-            proxyMethod.invoke(instance);
+            ctx = beanManager.createCreationalContext(bean);
+
+            Object proxyInstance = beanManager.getReference(bean, bean.getBeanClass(), ctx);
+
+            Method targetMethod = proxyInstance.getClass().getMethod(method.getName());
+            targetMethod.invoke(proxyInstance);
+
         } catch (Exception e) {
-            appLogger.errorLog(new LogContent("Failed to warmup startup cache for method: " + method.getName(), e.getMessage()), "invokeStartupMethod");
+            appLogger.errorLog(
+                    new LogContent("Failed to warmup startup cache for method: " + method.getName(), e.getMessage()),
+                    "invokeStartupMethod"
+            );
         } finally {
-            if (bean.getScope() != null && bean.getScope().equals(javax.enterprise.context.Dependent.class)) {
+            if (ctx != null && bean.getScope() != null && bean.getScope().equals(javax.enterprise.context.Dependent.class)) {
                 ctx.release();
             }
         }

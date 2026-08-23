@@ -11,11 +11,14 @@ import javax.annotation.PreDestroy;
 import javax.ejb.ConcurrencyManagement;
 import javax.ejb.ConcurrencyManagementType;
 import javax.ejb.Singleton;
+import javax.ejb.Startup;
 import javax.inject.Inject;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 @Singleton
+@Startup
 @ConcurrencyManagement(ConcurrencyManagementType.BEAN)
 public class CachePubSubService {
 
@@ -33,10 +36,15 @@ public class CachePubSubService {
 
     private ExecutorService listenerExecutor;
     private volatile JedisPubSub activePubSub;
+    private volatile boolean stopped = false;
 
     @PostConstruct
     public void init() {
-        listenerExecutor = Executors.newSingleThreadExecutor(r -> new Thread(r, "Cache-PubSub-Listener-Thread"));
+        listenerExecutor = Executors.newSingleThreadExecutor(r -> {
+            Thread thread = new Thread(r, "Cache-PubSub-Listener-Thread");
+            thread.setDaemon(true);
+            return thread;
+        });
         listenerExecutor.submit(this::subscribeToChannel);
     }
 
@@ -49,37 +57,48 @@ public class CachePubSubService {
     }
 
     private void subscribeToChannel() {
-        while (!Thread.currentThread().isInterrupted()) {
+        while (!stopped && !Thread.currentThread().isInterrupted()) {
             try (Jedis jedis = cacheService.getResource()) {
                 if (jedis == null) {
-                    Thread.sleep(5000);
+                    safeSleep(5000);
                     continue;
                 }
-                activePubSub = new JedisPubSub() {
-                    @Override
-                    public void onMessage(String channel, String message) {
-                        handleClusterEvictionMessage(message);
-                    }
-                };
+
+                activePubSub = createPubSubListener();
                 jedis.subscribe(activePubSub, CHANNEL_NAME);
+
             } catch (Exception e) {
-                appLogger.errorLog(new LogContent("Redis Pub/Sub connection lost, reconnecting...", e.getMessage()), "subscribeToChannel");
-                try {
-                    Thread.sleep(3000);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    break;
+                if (!stopped) {
+                    appLogger.errorLog(
+                            new LogContent("Redis Pub/Sub connection lost, reconnecting...", e.getMessage()),
+                            "subscribeToChannel"
+                    );
+                    safeSleep(3000);
                 }
             }
         }
     }
 
+    private JedisPubSub createPubSubListener() {
+        return new JedisPubSub() {
+            @Override
+            public void onMessage(String channel, String message) {
+                handleClusterEvictionMessage(message);
+            }
+        };
+    }
+
     private void handleClusterEvictionMessage(String message) {
+        if (message == null || message.trim().isEmpty()) {
+            return;
+        }
+
         try {
             String[] parts = message.split(":", 2);
             if (parts.length == 2) {
                 String cacheName = parts[0];
                 String target = parts[1];
+
                 if (target.endsWith("*")) {
                     localCacheManager.invalidateAll(cacheName);
                 } else {
@@ -91,13 +110,36 @@ public class CachePubSubService {
         }
     }
 
+    private void safeSleep(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
     @PreDestroy
     public void destroy() {
+        this.stopped = true;
+
         if (activePubSub != null && activePubSub.isSubscribed()) {
-            activePubSub.unsubscribe();
+            try {
+                activePubSub.unsubscribe();
+            } catch (Exception e) {
+                appLogger.errorLog(new LogContent("Error during Pub/Sub unsubscribe", e.getMessage()), "destroy");
+            }
         }
+
         if (listenerExecutor != null) {
-            listenerExecutor.shutdownNow();
+            listenerExecutor.shutdown();
+            try {
+                if (!listenerExecutor.awaitTermination(3, TimeUnit.SECONDS)) {
+                    listenerExecutor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                listenerExecutor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
         }
     }
 }
