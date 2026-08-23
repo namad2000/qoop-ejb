@@ -1,6 +1,7 @@
 package io.qoop.cacheable;
 
 import io.qoop.global.model.LogContent;
+import io.qoop.util.ServiceBundleProvider;
 import ir.tamin.framework.cdi.util.WebProperties;
 import ir.tamin.framework.core.util.Bundle;
 import ir.tamin.framework.logging.api.logger.AppLogger;
@@ -31,15 +32,22 @@ public class CacheService {
 
     private JedisPool jedisPool;
 
+    @Inject
+    private ServiceBundleProvider bundleProvider;
+
     @PostConstruct
     public void init() {
         try {
             JedisPoolConfig poolConfig = buildPoolConfig();
 
-            String host = serviceBundle.getProperty("redis.host");
-            int port = Integer.parseInt(serviceBundle.getProperty("redis.port"));
-            String username = serviceBundle.getProperty("redis.username");
-            String password = serviceBundle.getProperty("redis.password");
+            String host = bundleProvider.getPropertySafe("redis.host");
+            int port = bundleProvider.getIntProperty("redis.port", 6379);
+            String username = bundleProvider.getPropertySafe("redis.username");
+            String password = bundleProvider.getPropertySafe("redis.password");
+
+            if (host.isEmpty()) {
+                host = "localhost";
+            }
 
             if (isNotBlank(username)) {
                 jedisPool = new JedisPool(poolConfig, host, port, Protocol.DEFAULT_TIMEOUT, username, password);

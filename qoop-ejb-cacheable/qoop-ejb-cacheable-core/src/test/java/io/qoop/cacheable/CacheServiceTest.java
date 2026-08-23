@@ -1,9 +1,10 @@
 package io.qoop.cacheable;
 
 import io.qoop.global.model.LogContent;
-import ir.tamin.framework.core.util.Bundle;
+import io.qoop.util.ServiceBundleProvider;
 import ir.tamin.framework.logging.api.logger.AppLogger;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -24,13 +25,14 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("CacheService Unit Tests")
 class CacheServiceTest {
 
     @Mock
     private AppLogger appLogger;
 
     @Mock
-    private Bundle serviceBundle;
+    private ServiceBundleProvider bundleProvider;
 
     @Mock
     private JedisPool jedisPool;
@@ -57,45 +59,49 @@ class CacheServiceTest {
     // =========================================================================
 
     @Test
+    @DisplayName("init with username and password should initialize jedisPool successfully")
     void testInit_WithUsernameAndPassword() throws Exception {
         injectJedisPool(null);
-        lenient().when(serviceBundle.getProperty("redis.host")).thenReturn("127.0.0.1");
-        lenient().when(serviceBundle.getProperty("redis.port")).thenReturn("6379");
-        lenient().when(serviceBundle.getProperty("redis.username")).thenReturn("admin");
-        lenient().when(serviceBundle.getProperty("redis.password")).thenReturn("secret");
+        lenient().when(bundleProvider.getPropertySafe("redis.host")).thenReturn("127.0.0.1");
+        lenient().when(bundleProvider.getIntProperty("redis.port", 6379)).thenReturn(6379);
+        lenient().when(bundleProvider.getPropertySafe("redis.username")).thenReturn("admin");
+        lenient().when(bundleProvider.getPropertySafe("redis.password")).thenReturn("secret");
 
         cacheService.init();
         verifyNoInteractions(appLogger);
     }
 
     @Test
+    @DisplayName("init with password only should initialize jedisPool successfully")
     void testInit_WithPasswordOnly() throws Exception {
         injectJedisPool(null);
-        lenient().when(serviceBundle.getProperty("redis.host")).thenReturn("127.0.0.1");
-        lenient().when(serviceBundle.getProperty("redis.port")).thenReturn("6379");
-        lenient().when(serviceBundle.getProperty("redis.username")).thenReturn("");
-        lenient().when(serviceBundle.getProperty("redis.password")).thenReturn("secret");
+        lenient().when(bundleProvider.getPropertySafe("redis.host")).thenReturn("127.0.0.1");
+        lenient().when(bundleProvider.getIntProperty("redis.port", 6379)).thenReturn(6379);
+        lenient().when(bundleProvider.getPropertySafe("redis.username")).thenReturn("");
+        lenient().when(bundleProvider.getPropertySafe("redis.password")).thenReturn("secret");
 
         cacheService.init();
         verifyNoInteractions(appLogger);
     }
 
     @Test
+    @DisplayName("init without authentication credentials")
     void testInit_WithoutAuth() throws Exception {
         injectJedisPool(null);
-        lenient().when(serviceBundle.getProperty("redis.host")).thenReturn("127.0.0.1");
-        lenient().when(serviceBundle.getProperty("redis.port")).thenReturn("6379");
-        lenient().when(serviceBundle.getProperty("redis.username")).thenReturn(null);
-        lenient().when(serviceBundle.getProperty("redis.password")).thenReturn(null);
+        lenient().when(bundleProvider.getPropertySafe("redis.host")).thenReturn("127.0.0.1");
+        lenient().when(bundleProvider.getIntProperty("redis.port", 6379)).thenReturn(6379);
+        lenient().when(bundleProvider.getPropertySafe("redis.username")).thenReturn("");
+        lenient().when(bundleProvider.getPropertySafe("redis.password")).thenReturn("");
 
         cacheService.init();
         verifyNoInteractions(appLogger);
     }
 
     @Test
+    @DisplayName("init should log error when exception is thrown")
     void testInit_Exception_LogsError() throws Exception {
         injectJedisPool(null);
-        when(serviceBundle.getProperty("redis.host")).thenThrow(new RuntimeException("Configuration error"));
+        when(bundleProvider.getPropertySafe("redis.host")).thenThrow(new RuntimeException("Configuration error"));
 
         cacheService.init();
         verify(appLogger, times(1)).errorLog(any(LogContent.class), eq("init"));

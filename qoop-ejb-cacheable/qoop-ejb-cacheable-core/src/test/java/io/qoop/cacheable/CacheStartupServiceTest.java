@@ -93,10 +93,13 @@ class CacheStartupServiceTest {
             when(beanManager.getBeans(Object.class)).thenReturn(beans);
 
             Class<?> beanClass = SampleBeanClass.class;
+            SampleBeanClass targetInstance = new SampleBeanClass();
+
             when(bean.getBeanClass()).thenReturn((Class) beanClass);
+            when(bean.getTypes()).thenReturn(Collections.singleton(beanClass));
             when(bean.getScope()).thenReturn((Class) Dependent.class);
             when(beanManager.createCreationalContext(bean)).thenReturn((CreationalContext) creationalContext);
-            when(beanManager.getReference(bean, beanClass, creationalContext)).thenReturn(new SampleBeanClass());
+            when(beanManager.getReference(eq(bean), any(), eq(creationalContext))).thenReturn(targetInstance);
 
             cacheStartupService.warmupCacheOnStartup();
 
@@ -128,10 +131,13 @@ class CacheStartupServiceTest {
             when(beanManager.getBeans(Object.class)).thenReturn(beans);
 
             Class<?> beanClass = SampleBeanClass.class;
+            SampleBeanClass targetInstance = new SampleBeanClass();
+
             when(bean.getBeanClass()).thenReturn((Class) beanClass);
+            when(bean.getTypes()).thenReturn(Collections.singleton(beanClass));
             when(bean.getScope()).thenReturn((Class) RequestScoped.class);
             when(beanManager.createCreationalContext(bean)).thenReturn((CreationalContext) creationalContext);
-            when(beanManager.getReference(bean, beanClass, creationalContext)).thenReturn(new SampleBeanClass());
+            when(beanManager.getReference(eq(bean), any(), eq(creationalContext))).thenReturn(targetInstance);
 
             cacheStartupService.warmupCacheOnStartup();
 
@@ -160,9 +166,10 @@ class CacheStartupServiceTest {
 
             Class<?> beanClass = ThrowingBeanClass.class;
             when(bean.getBeanClass()).thenReturn((Class) beanClass);
+            when(bean.getTypes()).thenReturn(Collections.singleton(beanClass));
             when(bean.getScope()).thenReturn(null);
             when(beanManager.createCreationalContext(bean)).thenReturn((CreationalContext) creationalContext);
-            when(beanManager.getReference(bean, beanClass, creationalContext)).thenReturn(new ThrowingBeanClass());
+            when(beanManager.getReference(eq(bean), any(), eq(creationalContext))).thenReturn(new ThrowingBeanClass());
 
             cacheStartupService.warmupCacheOnStartup();
 

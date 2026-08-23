@@ -9,12 +9,15 @@ import javax.ejb.ConcurrencyManagement;
 import javax.ejb.ConcurrencyManagementType;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
+import javax.enterprise.context.Dependent;
 import javax.enterprise.context.spi.CreationalContext;
 import javax.enterprise.inject.spi.Bean;
 import javax.enterprise.inject.spi.BeanManager;
 import javax.inject.Inject;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Type;
 import java.util.Set;
 
 @Startup
@@ -75,10 +78,18 @@ public class CacheStartupService {
         CreationalContext<?> ctx = null;
         try {
             ctx = beanManager.createCreationalContext(bean);
+            Type requiredType = selectRequiredType(bean);
 
-            Object proxyInstance = beanManager.getReference(bean, bean.getBeanClass(), ctx);
+            Object proxyInstance = beanManager.getReference(bean, requiredType, ctx);
 
-            Method targetMethod = proxyInstance.getClass().getMethod(method.getName());
+            Method targetMethod;
+            try {
+                targetMethod = proxyInstance.getClass().getMethod(method.getName(), method.getParameterTypes());
+            } catch (NoSuchMethodException e) {
+                targetMethod = method;
+                targetMethod.setAccessible(true);
+            }
+
             targetMethod.invoke(proxyInstance);
 
         } catch (Exception e) {
@@ -87,9 +98,25 @@ public class CacheStartupService {
                     "invokeStartupMethod"
             );
         } finally {
-            if (ctx != null && bean.getScope() != null && bean.getScope().equals(javax.enterprise.context.Dependent.class)) {
+            if (ctx != null && isDependentScoped(bean)) {
                 ctx.release();
             }
         }
+    }
+
+    private boolean isDependentScoped(Bean<?> bean) {
+        Class<? extends Annotation> scope = bean.getScope();
+        return scope != null && Dependent.class.isAssignableFrom(scope);
+    }
+
+    private Type selectRequiredType(Bean<?> bean) {
+        if (bean.getTypes() != null) {
+            for (Type type : bean.getTypes()) {
+                if (type instanceof Class && ((Class<?>) type).isInterface()) {
+                    return type;
+                }
+            }
+        }
+        return bean.getBeanClass() != null ? bean.getBeanClass() : Object.class;
     }
 }

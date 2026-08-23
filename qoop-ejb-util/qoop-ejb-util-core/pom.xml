@@ -21,6 +21,11 @@
         </dependency>
 
         <dependency>
+            <groupId>javax.ejb</groupId>
+            <artifactId>javax.ejb-api</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-expression</artifactId>
         </dependency>
@@ -28,6 +33,17 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-core</artifactId>
+        </dependency>
+
+        <!-- Internal Dependencies -->
+        <dependency>
+            <groupId>ir.tamin.framework.logging</groupId>
+            <artifactId>logging-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.qoop</groupId>
+            <artifactId>qoop-ejb-global-core</artifactId>
         </dependency>
     </dependencies>
 </project>
